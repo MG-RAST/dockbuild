@@ -1,18 +1,16 @@
 --- 
 repositories: 
-  - 
-    name: mgrast/v3-web
+  mgrast/v3-web: 
     tags: 
-      - latest: 
-          dockerfile: dockerfiles/web/Dockerfile
-          git_branch: master
-          git_repository: "https://github.com/MG-RAST/MG-RAST.git"
-      - develop:
-          dockerfile: dockerfiles/web/Dockerfile
-          git_branch: develop
-          git_repository: "https://github.com/MG-RAST/MG-RAST.git"
-      - <git_tag>:
-          dockerfile: dockerfiles/web/Dockerfile
-          repository: "https://github.com/MG-RAST/MG-RAST.git"
-          tag: <git_tag>
-        
+      develop: 
+        branch: develop
+        dockerfile: dockerfiles/web/Dockerfile
+        repository: "https://github.com/MG-RAST/MG-RAST.git"
+      git_tag: 
+        dockerfile: dockerfiles/web/Dockerfile
+        repository: "https://github.com/MG-RAST/MG-RAST.git"
+        tag: <git_tag>
+      latest: 
+        branch: master
+        dockerfile: dockerfiles/web/Dockerfile
+        repository: "https://github.com/MG-RAST/MG-RAST.git"
