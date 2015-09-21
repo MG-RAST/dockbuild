@@ -97,24 +97,31 @@ func main() {
 	log.SetLevel(log.DebugLevel)
 	//log.SetLevel(log.InfoLevel)
 
-	document := Document{}
+	if len(os.Args) > 3 {
 
-	yaml_bytes, err := ioutil.ReadFile("test.yaml")
+		document := Document{}
 
-	err = yaml.Unmarshal([]byte(yaml_bytes), &document)
-	if err != nil {
-		log.Fatalf("error: %v", err)
-	}
+		yaml_bytes, err := ioutil.ReadFile(os.Args[1])
+		if err != nil {
+			log.Fatalf("error: %v", err)
+			os.Exit(1)
+		}
 
-	d, err := yaml.Marshal(&document)
-	if err != nil {
-		log.Fatalf("error: %v", err)
-	}
-	fmt.Printf("--- yaml file:\n%s\n\n", string(d))
+		err = yaml.Unmarshal([]byte(yaml_bytes), &document)
+		if err != nil {
+			log.Fatalf("error: %v", err)
+			os.Exit(1)
+		}
 
-	if len(os.Args) > 2 {
-		image_repo := os.Args[1]
-		image_tag := os.Args[2]
+		d, err := yaml.Marshal(&document)
+		if err != nil {
+			log.Fatalf("error: %v", err)
+			os.Exit(1)
+		}
+		log.Debugf("--- yaml file:\n%s\n\n", string(d))
+
+		image_repo := os.Args[2]
+		image_tag := os.Args[3]
 
 		log.Infof("image_repo: %s\n", image_repo)
 
@@ -239,7 +246,7 @@ func main() {
 
 }
 
-// gofmt -w . && go build . && ./dockbuild mgrast/v3-web develop
+// gofmt -w . && go build . && ./dockbuild ./test.yaml mgrast/v3-web develop
 // curl  -X GET "https://api.github.com/repos/wgerlach/Skycore/git/refs/heads/master"
 // show head commit : git rev-parse HEAD
 // commit date: git log -1  --pretty=format:"%cd" --date=iso # returns 2015-09-18 23:22:36 -0500
