@@ -1,3 +1,13 @@
+#
+# DEPRECATED!
+#
+# file moved to new location:
+#
+# https://github.com/MG-RAST/MG-RAST-infrastructure/blob/master/mgrast.yaml
+#
+#
+# DEPRECATED
+#
 --- 
 repositories: 
   mgrast/v3-web: 
