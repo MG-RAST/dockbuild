@@ -81,7 +81,7 @@ repositories:
         branch: master
         dockerfile: services/solr-m5nr/docker/Dockerfile
   mgrast/solr-metagenome:
-   tags:
+    tags:
       latest:
         repository: "https://github.com/MG-RAST/MG-RAST-infrastructure.git"
         branch: master
