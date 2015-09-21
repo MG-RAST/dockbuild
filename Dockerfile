@@ -11,4 +11,4 @@ RUN go get -d -a .
 # compile
 RUN CGO_ENABLED=0 go build -a -installsuffix cgo -v -o /app/dockbuild .
 
-CMD=["/app/dockbuild"]
+CMD ["/app/dockbuild"]
