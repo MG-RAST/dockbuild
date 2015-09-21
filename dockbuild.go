@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"fmt"
 	log "github.com/Sirupsen/logrus"
-	"github.com/google/go-github/github"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -30,35 +30,32 @@ type Document struct {
 	Repositories map[string]*Repository `yaml:"repositories"`
 }
 
-func getHeadCommitDate(git_user string, git_repo_name string) (tag_date string) {
+//func getHeadCommitDate(git_user string, git_repo_name string) (tag_date string) {
+//    // "github.com/google/go-github/github"
+//	client := github.NewClient(nil)
+//	ref, _, err := client.Git.GetRef(git_user, git_repo_name, "refs/heads/master")
+//	if err != nil {
+//		fmt.Printf("Git.GetRef returned error: %v", err)
+//		os.Exit(1)
+//	}
+//	fmt.Printf("Git.GetRef returned: %+v \n", ref)
+//	sha := *ref.Object.SHA
+//	fmt.Printf("Commit SHA: %s\n", sha)
 
-	client := github.NewClient(nil)
-	ref, _, err := client.Git.GetRef(git_user, git_repo_name, "refs/heads/master")
-	if err != nil {
-		fmt.Printf("Git.GetRef returned error: %v", err)
-		os.Exit(1)
-	}
-	fmt.Printf("Git.GetRef returned: %+v \n", ref)
-	sha := *ref.Object.SHA
-	fmt.Printf("Commit SHA: %s\n", sha)
-
-	commit, _, err := client.Git.GetCommit(git_user, git_repo_name, sha)
-	if err != nil {
-		fmt.Printf("Git.GetCommit returned error: %v", err)
-		os.Exit(1)
-	}
-	fmt.Printf("Git.GetCommit returned: %+v\n", commit)
-	author_date := commit.Author.Date
-	fmt.Printf("author_date: %v\n", author_date)
-	tag_date = fmt.Sprintf("%04d%02d%02d.%02d%02d", author_date.Year(), author_date.Month(), author_date.Day(), author_date.Hour(), author_date.Minute())
-	return
-}
+//	commit, _, err := client.Git.GetCommit(git_user, git_repo_name, sha)
+//	if err != nil {
+//		fmt.Printf("Git.GetCommit returned error: %v", err)
+//		os.Exit(1)
+//	}
+//	fmt.Printf("Git.GetCommit returned: %+v\n", commit)
+//	author_date := commit.Author.Date
+//	fmt.Printf("author_date: %v\n", author_date)
+//	tag_date = fmt.Sprintf("%04d%02d%02d.%02d%02d", author_date.Year(), author_date.Month(), author_date.Day(), author_date.Hour(), author_date.Minute())
+//	return
+//}
 
 func RunCommand(cmd *exec.Cmd) (stdout []byte, stderr []byte, err error) {
 	log.Info("executing: " + strings.Join(cmd.Args, " "))
-	//log.Info("executing: " + cmd.Path + " " + strings.Join(cmd.Args, " "))
-	//log.Info("executing: " + name + " " + strings.Join(arg, " "))
-	//cmd := exec.Command(name, arg...)
 
 	log.Debug(fmt.Sprintf("(RunCommand) cmd struct: %#v", cmd))
 
@@ -98,6 +95,7 @@ func Parse_git_url(url string) (git_user string, git_repo_name string) {
 
 func main() {
 	log.SetLevel(log.DebugLevel)
+	//log.SetLevel(log.InfoLevel)
 
 	document := Document{}
 
@@ -118,25 +116,41 @@ func main() {
 		image_repo := os.Args[1]
 		image_tag := os.Args[2]
 
-		fmt.Printf("image_repo: %s\n", image_repo)
+		log.Infof("image_repo: %s\n", image_repo)
 
 		// find entry in yaml file
 		repo, ok := document.Repositories[image_repo]
 		if !ok {
-			fmt.Printf("repo %s not found\n", image_repo)
+			log.Errorf("repo %s not found\n", image_repo)
 			os.Exit(1)
 		}
 
 		tag, ok := repo.Tags[image_tag]
 		if !ok {
-			fmt.Printf("tag %s not found\n", image_tag)
+			log.Errorf("tag %s not found\n", image_tag)
 			os.Exit(1)
 		}
 
 		git_user, git_repo_name := Parse_git_url(tag.Repository)
 
-		log.Debug(git_user + " " + git_repo_name)
+		log.Infof("Found repository %s/%s", git_user, git_repo_name)
 
+		// TODO clean dockbuild_*
+
+		glob_old_dirs := path.Join(os.TempDir() + "dockbuild_*")
+		log.Debug("glob_old_dirs: " + glob_old_dirs)
+		old_tmp_dirs, _ := filepath.Glob(glob_old_dirs)
+		for _, dir := range old_tmp_dirs {
+			log.Debug("deleting " + dir)
+			os.RemoveAll(dir)
+		}
+
+		tempdir, err := ioutil.TempDir("", "dockbuild_")
+		if err != nil {
+			log.Errorf("error: %v\n", err)
+			os.Exit(1)
+		}
+		log.Info("created temp dirctory: " + tempdir)
 		// use date_str always, unless there is a real version
 		//date_str = getHeadCommitDate(git_user, git_repo_name)
 
@@ -154,24 +168,26 @@ func main() {
 
 		// git clone
 
-		stdo, stde, err := RunCommand(exec.Command("git", git_clone_args...)) //"git", git_clone_args...
-		log.Info("stdout: " + string(stdo))
-		log.Info("stderr: " + string(stde))
+		cmd := exec.Command("git", git_clone_args...)
+		cmd.Dir = tempdir
+		stdo, stde, err := RunCommand(cmd) //"git", git_clone_args...
+		log.Debug("stdout: " + string(stdo))
+		log.Debug("stderr: " + string(stde))
 		if err != nil {
-			fmt.Printf("error: %v\n", err)
+			log.Errorf("error: %v\n", err)
 			os.Exit(1)
 
 		}
 
 		// get commit date
-		cmd := exec.Command("git", "log", "-1", "--pretty=format:\"%cd\"", "--date", "iso")
-		cmd.Dir = git_repo_name
+		cmd = exec.Command("git", "log", "-1", "--pretty=format:\"%cd\"", "--date", "iso")
+		cmd.Dir = path.Join(tempdir, git_repo_name)
 		stdo, stde, err = RunCommand(cmd)
 		stdo_str := string(stdo) // example "2015-09-09 10:53:34 -0500"
-		log.Info("stdout: " + stdo_str)
-		log.Info("stderr: " + string(stde))
+		log.Debug("stdout: " + stdo_str)
+		log.Debug("stderr: " + string(stde))
 		if err != nil {
-			fmt.Printf("error: %v\n", err)
+			log.Errorf("error: %v\n", err)
 			os.Exit(1)
 
 		}
@@ -183,7 +199,7 @@ func main() {
 		}
 
 		date_str := stdo_str[1:5] + stdo_str[6:8] + stdo_str[9:11] + "." + stdo_str[12:14] + stdo_str[15:17] + stdo_str[18:20]
-		log.Info("date_str: " + date_str)
+		log.Debug("date_str: " + date_str)
 		image_tag = date_str
 
 		docker_build_args := []string{"build", "--force-rm", "--no-cache", "--rm", "-t", image_repo + ":" + image_tag}
@@ -192,7 +208,7 @@ func main() {
 
 		dockerfile_filename := dockerfile_array[len(dockerfile_array)-1]
 		if dockerfile_filename == "" {
-			fmt.Printf("Dockerfile not defined !?")
+			log.Errorf("Dockerfile not defined !?")
 			os.Exit(1)
 		} else if dockerfile_filename != "Dockerfile" {
 			docker_build_args = append(docker_build_args, "-f", dockerfile_filename)
@@ -203,18 +219,18 @@ func main() {
 			dockerfile_path += "/" + dockerfile_array[i]
 		}
 
-		last_slash := strings.LastIndexAny(tag.Repository, "/")
-		suffix := tag.Repository[last_slash+1:]
-		directory := strings.TrimSuffix(suffix, ".git")
+		//last_slash := strings.LastIndexAny(tag.Repository, "/")
+		//suffix := tag.Repository[last_slash+1:]
+		//directory := strings.TrimSuffix(suffix, ".git")
 
-		dockerfile_directory := " ./" + path.Join(directory, dockerfile_path) + "/"
+		dockerfile_directory := path.Join(tempdir, git_repo_name, dockerfile_path) + "/"
 		docker_build_args = append(docker_build_args, dockerfile_directory)
 
-		stdo, stde, err = RunCommand(&exec.Cmd{Path: "docker", Args: docker_build_args})
-		log.Info("stdout: " + string(stdo))
-		log.Info("stderr: " + string(stde))
+		stdo, stde, err = RunCommand(exec.Command("docker", docker_build_args...))
+		log.Debug("stdout: " + string(stdo))
+		log.Debug("stderr: " + string(stde))
 		if err != nil {
-			fmt.Printf("error: %v\n", err)
+			log.Errorf("error: %v\n", err)
 			os.Exit(1)
 
 		}
