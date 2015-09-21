@@ -25,8 +25,8 @@ docker build -t dockbuild .
 ## Extract binary from Docker image:
 ```bash
 rm -f ./dockbuild
+docker rm dockbuild
 docker create --name dockbuild dockbuild
 docker cp dockbuild:/app/dockbuild .
-docker rm dockbuild
 ./dockbuild
 ```
