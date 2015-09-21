@@ -17,6 +17,7 @@ or
 ```bash
 git clone <this repo>
 cd dockbuild
+docker rmi dockbuild
 docker build -t dockbuild .
 ```
 
