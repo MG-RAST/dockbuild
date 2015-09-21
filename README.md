@@ -1,7 +1,7 @@
 # dockbuild
 
 
-## Get or build image
+## Get or build Docker image
 
 ```bash
 docker pull mgrast/dockbuild
@@ -13,11 +13,11 @@ or
 git clone <this repo> ;
 cd dockbuild
 docker build -t dockbuild .
-```bash
-
-
-##Extract binary:
 ```
+
+
+## Extract binary from Docker image:
+```bash
 docker create --name dockbuild dockbuild
 docker cp dockbuild:/app/dockbuild .
 docker rm dockbuild
