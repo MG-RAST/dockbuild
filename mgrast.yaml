@@ -6,19 +6,19 @@ repositories:
         branch: master
         dockerfile: dockerfiles/web/Dockerfile
         repository: "https://github.com/MG-RAST/MG-RAST.git"
-	 develop: 
+      develop: 
         branch: develop
         dockerfile: dockerfiles/web/Dockerfile
         repository: "https://github.com/MG-RAST/MG-RAST.git"
   mgrast/api:
     tags:
-	  master:
-	    branch: master
-		dockerfile: dockerfiles/api/Dockerfile
-		repository: "https://github.com/MG-RAST/MG-RAST.git"
+      master:
+        branch: master
+        dockerfile: dockerfiles/api/Dockerfile
+        repository: "https://github.com/MG-RAST/MG-RAST.git"
   mgrast/nginxconfd:
     tags:
-	  master:
-	    branch: master
-		repository: "https://github.com/MG-RAST/MG-RAST-infrastructure.git"
-		dockerfile: services/nginx/docker/Dockerfile
+      master:
+        branch: master
+        repository: "https://github.com/MG-RAST/MG-RAST-infrastructure.git"
+        dockerfile: services/nginx/docker/Dockerfile
