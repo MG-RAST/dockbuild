@@ -25,19 +25,19 @@ repositories:
   mgrast/mongodb:
     tags:
       2.4.14:
-       branch: master
-       repository: "https://github.com/MG-RAST/AWE.git"
-       dockerfile: dockerfiles/mongodb/2.4.14/Dockerfile
+        branch: master
+        repository: "https://github.com/MG-RAST/AWE.git"
+        dockerfile: dockerfiles/mongodb/2.4.14/Dockerfile
       2.6.0:
-       branch: master
-       repository: "https://github.com/MG-RAST/AWE.git"
-       dockerfile: dockerfiles/mongodb/2.6.0/Dockerfile
+        branch: master
+        repository: "https://github.com/MG-RAST/AWE.git"
+        dockerfile: dockerfiles/mongodb/2.6.0/Dockerfile
   mgrast/awe:
     tags:
       latest:
-       branch: master
-       repository: "https://github.com/MG-RAST/AWE.git"
-       dockerfile: dockerfiles/awe/Dockerfile
+        branch: master
+        repository: "https://github.com/MG-RAST/AWE.git"
+        dockerfile: dockerfiles/awe/Dockerfile
   mgrast/cassandra:
     tags:
       latest:
