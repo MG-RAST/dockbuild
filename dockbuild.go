@@ -233,6 +233,7 @@ func main() {
 		dockerfile_directory := path.Join(tempdir, git_repo_name, dockerfile_path) + "/"
 		docker_build_args = append(docker_build_args, dockerfile_directory)
 
+		log.Infof("Create image $s ..." , image_repo + ":" + image_tag)
 		stdo, stde, err = RunCommand(exec.Command("docker", docker_build_args...))
 		log.Debug("stdout: " + string(stdo))
 		log.Debug("stderr: " + string(stde))
@@ -241,6 +242,7 @@ func main() {
 			os.Exit(1)
 
 		}
+		log.Infof("Image created: $s " , image_repo + ":" + image_tag)
 
 	}
 
