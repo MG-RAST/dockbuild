@@ -1,5 +1,10 @@
 # dockbuild
 
+## Usage:
+
+```bash
+dockbuild <yaml> <imagename> <tag>
+```
 
 ## Get or build Docker image
 
