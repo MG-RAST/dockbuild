@@ -1,10 +1,11 @@
 # dockbuild
 
 ```bash
-git clone <this repo> ; mkdir bin
-docker build -t dockbuild dockbuild
+git clone <this repo> ;
+cd dockbuild
+docker build -t dockbuild .
 docker create --name dockbuild dockbuild
-docker cp dockbuild:/app/dockbuild bin/
+docker cp dockbuild:/app/dockbuild .
 docker rm dockbuild
-bin/dockbuild
+./dockbuild
 ```
