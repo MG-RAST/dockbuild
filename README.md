@@ -15,7 +15,7 @@ docker pull mgrast/dockbuild
 or
 
 ```bash
-git clone <this repo> ;
+git clone <this repo>
 cd dockbuild
 docker build -t dockbuild .
 ```
