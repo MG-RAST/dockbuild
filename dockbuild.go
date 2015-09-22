@@ -2,8 +2,10 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	log "github.com/Sirupsen/logrus"
+	"github.com/vaughan0/go-ini"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
@@ -17,8 +19,9 @@ import (
 type Repo_tag struct {
 	Repository string `yaml:"repository"`
 	Dockerfile string `yaml:"dockerfile"`
-	Branch     string `yaml:"branch"`
-	Tag        string `yaml:"tag"`
+	Branch     string `yaml:"branch"` // takes tag as argument
+	Commit     string `yaml:"commit"`
+	Recursive  bool   `yaml:"recursive"`
 }
 
 type Repository struct {
@@ -93,14 +96,118 @@ func Parse_git_url(url string) (git_user string, git_repo_name string) {
 	return
 }
 
+func Git_clone(base_dir string, repo_name string, tag *Repo_tag) (err error) {
+
+	git_repo_dir := path.Join(base_dir, repo_name)
+
+	// if it exists it should be empty
+	_, err = os.Stat(git_repo_dir)
+	if err != nil {
+		os.Remove(git_repo_dir)
+	}
+
+	git_clone_args := []string{"clone"}
+	if tag.Branch != "" {
+		git_clone_args = append(git_clone_args, "-b", tag.Branch)
+	}
+
+	git_clone_args = append(git_clone_args, tag.Repository)
+
+	// git clone
+	cmd := exec.Command("git", git_clone_args...)
+	cmd.Dir = base_dir
+	log.Debug("work directory: " + base_dir)
+	stdo, stde, err := RunCommand(cmd) //"git", git_clone_args...
+	log.Debug("stdout: " + string(stdo))
+	log.Debug("stderr: " + string(stde))
+	if err != nil {
+		log.Errorf("error: %v\n", err)
+		os.Exit(1)
+
+	}
+
+	if tag.Commit != "" {
+		cmd = exec.Command("git", "checkout", tag.Commit)
+		cmd.Dir = git_repo_dir
+		stdo, stde, err = RunCommand(cmd)
+		log.Debug("stdout: " + string(stdo))
+		log.Debug("stderr: " + string(stde))
+		if err != nil {
+			return err
+		}
+	}
+
+	if !tag.Recursive {
+		return
+	}
+
+	gitmodules_filename := path.Join(git_repo_dir, ".gitmodules")
+	_, err = os.Stat(gitmodules_filename)
+	if err != nil {
+		return
+	}
+
+	log.Debug("found .gitmodules")
+
+	ini_object, err := ini.LoadFile(gitmodules_filename)
+	if err != nil {
+		log.Errorf("could not read ini file %s", gitmodules_filename)
+		os.Exit(1)
+	}
+
+	for name, section := range ini_object { // name, section
+		log.Debugf("Section name: %s\n", name)
+
+		submodule_path, ok := section["path"]
+		if !ok {
+			return errors.New("Key \"path\" not found")
+		}
+		submodule_url, ok := section["url"]
+		if !ok {
+			return errors.New("Key \"url\" not found")
+		}
+		submodule_branch, ok := section["branch"]
+		if !ok {
+			return errors.New("Key \"branch\" not found")
+		}
+
+		// extract commit
+		//git ls-tree master <path>
+		// example output: "160000 commit fdff68fdbd694d293a0bdf3c20ae3f6284a9478e	AWE"
+		cmd = exec.Command("git", "ls-tree", "master", submodule_path)
+		cmd.Dir = git_repo_dir
+		stdo, stde, err = RunCommand(cmd)
+		log.Debug("stdout: " + string(stdo))
+		log.Debug("stderr: " + string(stde))
+		if err != nil {
+			return err
+		}
+		fields := strings.Fields(string(stdo))
+		log.Info("commit: " + fields[2])
+		log.Infof("commit len: %d ", len(fields[2]))
+		if len(fields[2]) != 40 {
+
+			return errors.New("Commit hash does not have length 40 :" + fields[2])
+		}
+
+		submodule_basepath, submodule_reponame := path.Split(submodule_path)
+
+		err = Git_clone(path.Join(git_repo_dir, submodule_basepath), submodule_reponame, &Repo_tag{Repository: submodule_url, Branch: submodule_branch, Recursive: tag.Recursive})
+		if err != nil {
+			return
+		}
+
+	}
+
+	return
+}
+
 func main() {
 	log.SetLevel(log.DebugLevel)
 	//log.SetLevel(log.InfoLevel)
 
-	if len(os.Args) > 3 {
-
-		document := Document{}
-
+	document := Document{}
+	if len(os.Args) > 1 {
 		yaml_bytes, err := ioutil.ReadFile(os.Args[1])
 		if err != nil {
 			log.Fatalf("error: %v", err)
@@ -119,6 +226,9 @@ func main() {
 			os.Exit(1)
 		}
 		log.Debugf("--- yaml file:\n%s\n\n", string(d))
+	}
+
+	if len(os.Args) > 3 {
 
 		image_repo := os.Args[2]
 		image_tag := os.Args[3]
@@ -140,6 +250,8 @@ func main() {
 
 		git_user, git_repo_name := Parse_git_url(tag.Repository)
 
+		tag.Recursive = true
+
 		log.Infof("Found repository %s/%s", git_user, git_repo_name)
 
 		// TODO clean dockbuild_*
@@ -158,38 +270,22 @@ func main() {
 			os.Exit(1)
 		}
 		log.Info("created temp dirctory: " + tempdir)
+
+		git_repo_dir := path.Join(tempdir, git_repo_name)
 		// use date_str always, unless there is a real version
 		//date_str = getHeadCommitDate(git_user, git_repo_name)
 
 		//fmt.Printf("date_str: %s\n", date_str)
 
 		// found entry, now build commands
-		git_clone_args := []string{"clone", "--recursive"}
-		if tag.Branch != "" {
-			git_clone_args = append(git_clone_args, "-b", tag.Branch)
-		}
-		if tag.Tag != "" {
-			git_clone_args = append(git_clone_args, "-b", tag.Tag)
-		}
-		git_clone_args = append(git_clone_args, tag.Repository)
 
-		// git clone
+		err = Git_clone(tempdir, git_repo_name, tag)
 
-		cmd := exec.Command("git", git_clone_args...)
-		cmd.Dir = tempdir
-		stdo, stde, err := RunCommand(cmd) //"git", git_clone_args...
-		log.Debug("stdout: " + string(stdo))
-		log.Debug("stderr: " + string(stde))
-		if err != nil {
-			log.Errorf("error: %v\n", err)
-			os.Exit(1)
-
-		}
-
+		os.Exit(0)
 		// get commit date
-		cmd = exec.Command("git", "log", "-1", "--pretty=format:\"%cd\"", "--date", "iso")
-		cmd.Dir = path.Join(tempdir, git_repo_name)
-		stdo, stde, err = RunCommand(cmd)
+		cmd := exec.Command("git", "log", "-1", "--pretty=format:\"%cd\"", "--date", "iso")
+		cmd.Dir = git_repo_dir
+		stdo, stde, err := RunCommand(cmd)
 		stdo_str := string(stdo) // example "2015-09-09 10:53:34 -0500"
 		log.Debug("stdout: " + stdo_str)
 		log.Debug("stderr: " + string(stde))
@@ -230,7 +326,7 @@ func main() {
 		//suffix := tag.Repository[last_slash+1:]
 		//directory := strings.TrimSuffix(suffix, ".git")
 
-		dockerfile_directory := path.Join(tempdir, git_repo_name, dockerfile_path) + "/"
+		dockerfile_directory := path.Join(git_repo_dir, dockerfile_path) + "/"
 		docker_build_args = append(docker_build_args, dockerfile_directory)
 
 		log.Infof("Create image %s ...", image_repo+":"+image_tag)
@@ -248,7 +344,7 @@ func main() {
 
 }
 
-// gofmt -w . && go build . && ./dockbuild ./test.yaml mgrast/v3-web develop
+// gofmt -w . && go build . && ./dockbuild ~/git/MG-RAST-infrastructure/mgrast.yaml mgrast/v3-web develop
 // curl  -X GET "https://api.github.com/repos/wgerlach/Skycore/git/refs/heads/master"
 // show head commit : git rev-parse HEAD
 // commit date: git log -1  --pretty=format:"%cd" --date=iso # returns 2015-09-18 23:22:36 -0500
