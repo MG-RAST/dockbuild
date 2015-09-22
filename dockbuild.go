@@ -370,7 +370,7 @@ func main() {
 	log.SetLevel(log.DebugLevel)
 	//log.SetLevel(log.InfoLevel)
 
-	if len(os.Args) == 1 {
+	if len(os.Args) <= 1 {
 		fmt.Println("\nUsage: dockbuild <yaml-file> <reponame> <tag>\n\n")
 		os.Exit(0)
 	}
