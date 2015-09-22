@@ -337,6 +337,11 @@ func main() {
 	log.SetLevel(log.DebugLevel)
 	//log.SetLevel(log.InfoLevel)
 
+	if len(os.Args) == 1 {
+		fmt.Println("\nUsage: dockbuild <yaml-file> <reponame> <tag>\n\n")
+		os.Exit(0)
+	}
+
 	var document Document
 	if len(os.Args) > 1 {
 		document = read_yaml(os.Args[1])
