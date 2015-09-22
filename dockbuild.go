@@ -309,7 +309,6 @@ func dockbuild(document Document, image_repo string, image_tag string) (err erro
 
 	err = Git_clone(tempdir, git_repo_name, tag)
 
-	os.Exit(0)
 	// get commit date
 	cmd := exec.Command("git", "log", "-1", "--pretty=format:\"%cd\"", "--date", "iso")
 	cmd.Dir = git_repo_dir
