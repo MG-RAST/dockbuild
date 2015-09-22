@@ -183,16 +183,16 @@ func Git_clone(base_dir string, repo_name string, tag *Repo_tag) (err error) {
 			return err
 		}
 		fields := strings.Fields(string(stdo))
-		log.Info("commit: " + fields[2])
-		log.Infof("commit len: %d ", len(fields[2]))
-		if len(fields[2]) != 40 {
+		commit := fields[2]
+		log.Debug("commit: " + commit)
 
-			return errors.New("Commit hash does not have length 40 :" + fields[2])
+		if len(commit) != 40 {
+			return errors.New("Commit hash does not have length 40 :" + commit)
 		}
 
 		submodule_basepath, submodule_reponame := path.Split(submodule_path)
 
-		err = Git_clone(path.Join(git_repo_dir, submodule_basepath), submodule_reponame, &Repo_tag{Repository: submodule_url, Branch: submodule_branch, Recursive: tag.Recursive})
+		err = Git_clone(path.Join(git_repo_dir, submodule_basepath), submodule_reponame, &Repo_tag{Repository: submodule_url, Branch: submodule_branch, Commit: commit, Recursive: tag.Recursive})
 		if err != nil {
 			return
 		}
@@ -202,144 +202,154 @@ func Git_clone(base_dir string, repo_name string, tag *Repo_tag) (err error) {
 	return
 }
 
+func read_yaml(yaml_file string) Document {
+
+	document := Document{}
+
+	yaml_bytes, err := ioutil.ReadFile(yaml_file)
+	if err != nil {
+		log.Fatalf("error: %v", err)
+		os.Exit(1)
+	}
+
+	err = yaml.Unmarshal([]byte(yaml_bytes), &document)
+	if err != nil {
+		log.Fatalf("error: %v", err)
+		os.Exit(1)
+	}
+
+	d, err := yaml.Marshal(&document)
+	if err != nil {
+		log.Fatalf("error: %v", err)
+		os.Exit(1)
+	}
+	log.Debugf("--- yaml file:\n%s\n\n", string(d))
+	return document
+}
+
+func dockbuild(document Document, image_repo string, image_tag string) (err error) {
+
+	log.Infof("image_repo: %s\n", image_repo)
+
+	// find entry in yaml file
+	repo, ok := document.Repositories[image_repo]
+	if !ok {
+		return errors.New(fmt.Sprintf("repo %s not found\n", image_repo))
+	}
+
+	tag, ok := repo.Tags[image_tag]
+	if !ok {
+
+		return errors.New(fmt.Sprintf("tag %s not found\n", image_tag))
+	}
+
+	git_user, git_repo_name := Parse_git_url(tag.Repository)
+
+	tag.Recursive = true
+
+	log.Infof("Found repository %s/%s", git_user, git_repo_name)
+
+	// TODO clean dockbuild_*
+
+	glob_old_dirs := path.Join(os.TempDir() + "dockbuild_*")
+	log.Debug("glob_old_dirs: " + glob_old_dirs)
+	old_tmp_dirs, _ := filepath.Glob(glob_old_dirs)
+	for _, dir := range old_tmp_dirs {
+		log.Debug("deleting " + dir)
+		os.RemoveAll(dir)
+	}
+
+	tempdir, err := ioutil.TempDir("", "dockbuild_")
+	if err != nil {
+		log.Errorf("error: %v\n", err)
+		return
+	}
+	log.Info("created temp dirctory: " + tempdir)
+
+	git_repo_dir := path.Join(tempdir, git_repo_name)
+	// use date_str always, unless there is a real version
+	//date_str = getHeadCommitDate(git_user, git_repo_name)
+
+	//fmt.Printf("date_str: %s\n", date_str)
+
+	// found entry, now build commands
+
+	err = Git_clone(tempdir, git_repo_name, tag)
+
+	os.Exit(0)
+	// get commit date
+	cmd := exec.Command("git", "log", "-1", "--pretty=format:\"%cd\"", "--date", "iso")
+	cmd.Dir = git_repo_dir
+	stdo, stde, err := RunCommand(cmd)
+	stdo_str := string(stdo) // example "2015-09-09 10:53:34 -0500"
+	log.Debug("stdout: " + stdo_str)
+	log.Debug("stderr: " + string(stde))
+	if err != nil {
+		log.Errorf("error: %v\n", err)
+		return
+
+	}
+
+	var validdate = regexp.MustCompile(`^\"[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}`)
+	if !validdate.MatchString(stdo_str) {
+		log.Fatal("Could not parse date: " + stdo_str)
+		return
+	}
+
+	date_str := stdo_str[1:5] + stdo_str[6:8] + stdo_str[9:11] + "." + stdo_str[12:14] + stdo_str[15:17] + stdo_str[18:20]
+	log.Debug("date_str: " + date_str)
+	image_tag = date_str
+
+	docker_build_args := []string{"build", "--force-rm", "--no-cache", "--rm", "-t", image_repo + ":" + image_tag}
+
+	dockerfile_array := strings.Split(tag.Dockerfile, "/")
+
+	dockerfile_filename := dockerfile_array[len(dockerfile_array)-1]
+	if dockerfile_filename == "" {
+		log.Errorf("Dockerfile not defined !?")
+		return
+	} else if dockerfile_filename != "Dockerfile" {
+		docker_build_args = append(docker_build_args, "-f", dockerfile_filename)
+	}
+
+	dockerfile_path := ""
+	for i := 0; i < len(dockerfile_array)-1; i++ {
+		dockerfile_path += "/" + dockerfile_array[i]
+	}
+
+	dockerfile_directory := path.Join(git_repo_dir, dockerfile_path) + "/"
+	docker_build_args = append(docker_build_args, dockerfile_directory)
+
+	log.Infof("Create image %s ...", image_repo+":"+image_tag)
+	stdo, stde, err = RunCommand(exec.Command("docker", docker_build_args...))
+	log.Debug("stdout: " + string(stdo))
+	log.Debug("stderr: " + string(stde))
+	if err != nil {
+		log.Errorf("error: %v\n", err)
+		return
+
+	}
+	log.Infof("Image created: %s ", image_repo+":"+image_tag)
+	return
+}
+
 func main() {
 	log.SetLevel(log.DebugLevel)
 	//log.SetLevel(log.InfoLevel)
 
-	document := Document{}
+	var document Document
 	if len(os.Args) > 1 {
-		yaml_bytes, err := ioutil.ReadFile(os.Args[1])
-		if err != nil {
-			log.Fatalf("error: %v", err)
-			os.Exit(1)
-		}
-
-		err = yaml.Unmarshal([]byte(yaml_bytes), &document)
-		if err != nil {
-			log.Fatalf("error: %v", err)
-			os.Exit(1)
-		}
-
-		d, err := yaml.Marshal(&document)
-		if err != nil {
-			log.Fatalf("error: %v", err)
-			os.Exit(1)
-		}
-		log.Debugf("--- yaml file:\n%s\n\n", string(d))
+		document = read_yaml(os.Args[1])
 	}
 
 	if len(os.Args) > 3 {
 
-		image_repo := os.Args[2]
-		image_tag := os.Args[3]
-
-		log.Infof("image_repo: %s\n", image_repo)
-
-		// find entry in yaml file
-		repo, ok := document.Repositories[image_repo]
-		if !ok {
-			log.Errorf("repo %s not found\n", image_repo)
-			os.Exit(1)
-		}
-
-		tag, ok := repo.Tags[image_tag]
-		if !ok {
-			log.Errorf("tag %s not found\n", image_tag)
-			os.Exit(1)
-		}
-
-		git_user, git_repo_name := Parse_git_url(tag.Repository)
-
-		tag.Recursive = true
-
-		log.Infof("Found repository %s/%s", git_user, git_repo_name)
-
-		// TODO clean dockbuild_*
-
-		glob_old_dirs := path.Join(os.TempDir() + "dockbuild_*")
-		log.Debug("glob_old_dirs: " + glob_old_dirs)
-		old_tmp_dirs, _ := filepath.Glob(glob_old_dirs)
-		for _, dir := range old_tmp_dirs {
-			log.Debug("deleting " + dir)
-			os.RemoveAll(dir)
-		}
-
-		tempdir, err := ioutil.TempDir("", "dockbuild_")
-		if err != nil {
-			log.Errorf("error: %v\n", err)
-			os.Exit(1)
-		}
-		log.Info("created temp dirctory: " + tempdir)
-
-		git_repo_dir := path.Join(tempdir, git_repo_name)
-		// use date_str always, unless there is a real version
-		//date_str = getHeadCommitDate(git_user, git_repo_name)
-
-		//fmt.Printf("date_str: %s\n", date_str)
-
-		// found entry, now build commands
-
-		err = Git_clone(tempdir, git_repo_name, tag)
-
-		os.Exit(0)
-		// get commit date
-		cmd := exec.Command("git", "log", "-1", "--pretty=format:\"%cd\"", "--date", "iso")
-		cmd.Dir = git_repo_dir
-		stdo, stde, err := RunCommand(cmd)
-		stdo_str := string(stdo) // example "2015-09-09 10:53:34 -0500"
-		log.Debug("stdout: " + stdo_str)
-		log.Debug("stderr: " + string(stde))
+		err := dockbuild(document, os.Args[2], os.Args[3])
 		if err != nil {
 			log.Errorf("error: %v\n", err)
 			os.Exit(1)
 
 		}
-
-		var validdate = regexp.MustCompile(`^\"[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}`)
-		if !validdate.MatchString(stdo_str) {
-			log.Fatal("Could not parse date: " + stdo_str)
-			os.Exit(1)
-		}
-
-		date_str := stdo_str[1:5] + stdo_str[6:8] + stdo_str[9:11] + "." + stdo_str[12:14] + stdo_str[15:17] + stdo_str[18:20]
-		log.Debug("date_str: " + date_str)
-		image_tag = date_str
-
-		docker_build_args := []string{"build", "--force-rm", "--no-cache", "--rm", "-t", image_repo + ":" + image_tag}
-
-		dockerfile_array := strings.Split(tag.Dockerfile, "/")
-
-		dockerfile_filename := dockerfile_array[len(dockerfile_array)-1]
-		if dockerfile_filename == "" {
-			log.Errorf("Dockerfile not defined !?")
-			os.Exit(1)
-		} else if dockerfile_filename != "Dockerfile" {
-			docker_build_args = append(docker_build_args, "-f", dockerfile_filename)
-		}
-
-		dockerfile_path := ""
-		for i := 0; i < len(dockerfile_array)-1; i++ {
-			dockerfile_path += "/" + dockerfile_array[i]
-		}
-
-		//last_slash := strings.LastIndexAny(tag.Repository, "/")
-		//suffix := tag.Repository[last_slash+1:]
-		//directory := strings.TrimSuffix(suffix, ".git")
-
-		dockerfile_directory := path.Join(git_repo_dir, dockerfile_path) + "/"
-		docker_build_args = append(docker_build_args, dockerfile_directory)
-
-		log.Infof("Create image %s ...", image_repo+":"+image_tag)
-		stdo, stde, err = RunCommand(exec.Command("docker", docker_build_args...))
-		log.Debug("stdout: " + string(stdo))
-		log.Debug("stderr: " + string(stde))
-		if err != nil {
-			log.Errorf("error: %v\n", err)
-			os.Exit(1)
-
-		}
-		log.Infof("Image created: %s ", image_repo+":"+image_tag)
-
 	}
 
 }
