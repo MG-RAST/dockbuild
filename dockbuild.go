@@ -21,12 +21,19 @@ type Repo_tag struct {
 	Dockerfile string `yaml:"dockerfile"`
 	Branch     string `yaml:"branch"` // takes tag as argument
 	Commit     string `yaml:"commit"`
-	Recursive  bool   `yaml:"recursive"`
+	Recursive  string `yaml:"recursive"`
 }
 
 type Repository struct {
 	//Name string			`yaml:"name"`
 	Tags map[string]*Repo_tag `yaml:"tags"`
+
+	// To be used as defaults
+	Repository string `yaml:"repository"`
+	Dockerfile string `yaml:"dockerfile"`
+	Branch     string `yaml:"branch"` // takes tag as argument
+	Commit     string `yaml:"commit"`
+	Recursive  string `yaml:"recursive"`
 }
 
 type Document struct {
@@ -96,6 +103,17 @@ func Parse_git_url(url string) (git_user string, git_repo_name string) {
 	return
 }
 
+func isTrue(bool_str string) bool {
+	true_array := []string{"y", "true", "yes", "on"}
+	bool_low := strings.ToLower(bool_str)
+	for _, value := range true_array {
+		if value == bool_low {
+			return true
+		}
+	}
+	return false
+}
+
 func Git_clone(base_dir string, repo_name string, tag *Repo_tag) (err error) {
 
 	git_repo_dir := path.Join(base_dir, repo_name)
@@ -137,7 +155,7 @@ func Git_clone(base_dir string, repo_name string, tag *Repo_tag) (err error) {
 		}
 	}
 
-	if !tag.Recursive {
+	if !isTrue(tag.Recursive) {
 		return
 	}
 
@@ -243,9 +261,24 @@ func dockbuild(document Document, image_repo string, image_tag string) (err erro
 		return errors.New(fmt.Sprintf("tag %s not found\n", image_tag))
 	}
 
-	git_user, git_repo_name := Parse_git_url(tag.Repository)
+	// inherit values from parent if not defined
+	if tag.Repository == "" {
+		tag.Repository = repo.Repository
+	}
+	if tag.Branch == "" {
+		tag.Branch = repo.Branch
+	}
+	if tag.Dockerfile == "" {
+		tag.Dockerfile = repo.Dockerfile
+	}
+	if tag.Commit == "" {
+		tag.Commit = repo.Commit
+	}
+	if tag.Recursive == "" {
+		tag.Recursive = repo.Recursive
+	}
 
-	tag.Recursive = true
+	git_user, git_repo_name := Parse_git_url(tag.Repository)
 
 	log.Infof("Found repository %s/%s", git_user, git_repo_name)
 
