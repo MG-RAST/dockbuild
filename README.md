@@ -19,8 +19,8 @@ or
 ```bash
 git clone https://github.com/MG-RAST/dockbuild.git
 cd dockbuild
-docker rmi dockbuild
-docker build -t dockbuild .
+docker rmi mgrast/dockbuild
+docker build -t mgrast/dockbuild .
 ```
 
 
@@ -28,7 +28,7 @@ docker build -t dockbuild .
 ```bash
 rm -f ./dockbuild
 docker rm dockbuild
-docker create --name dockbuild dockbuild
+docker create --name dockbuild mgrast/dockbuild
 docker cp dockbuild:/app/dockbuild .
 ./dockbuild
 ```
