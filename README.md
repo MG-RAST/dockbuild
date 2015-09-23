@@ -32,3 +32,6 @@ docker create --name dockbuild dockbuild
 docker cp dockbuild:/app/dockbuild .
 ./dockbuild
 ```
+
+## Example yaml file
+See the MG-RAST [yaml file](https://github.com/MG-RAST/MG-RAST-infrastructure/blob/master/mgrast.yaml) for an example.
