@@ -258,13 +258,20 @@ func dockbuild(document Document, image_repo string, image_tag string) (err erro
 	tag, ok := repo.Tags[image_tag]
 	if !ok {
 
-		return errors.New(fmt.Sprintf("tag %s not found\n", image_tag))
+		//return errors.New(fmt.Sprintf("tag %s not found\n", image_tag))
+		log.Infof("dockbuild tag %s not found, will use github tag \n", image_tag)
+		tag = &Repo_tag{Repository: repo.Repository, Branch: image_tag, Commit: repo.Commit, Recursive: repo.Recursive}
 	}
 
 	// inherit values from parent if not defined
 	if tag.Repository == "" {
 		tag.Repository = repo.Repository
 	}
+	if tag.Repository == "" {
+		log.Fatal("Repository undefined !")
+		os.Exit(1)
+	}
+
 	if tag.Branch == "" {
 		tag.Branch = repo.Branch
 	}
