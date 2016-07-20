@@ -161,9 +161,9 @@ def build_image(build_config, service, simulate=False):
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-c", "--config", description='show config', action='store_true')
-parser.add_argument("-s", "--simulate", description='simulate the build process', action='store_true')
-parser.add_argument('args', nargs=argparse.REMAINDER)
+parser.add_argument("-c", "--config", help='show config', action='store_true')
+parser.add_argument("-s", "--simulate", help='simulate the build process', action='store_true')
+parser.add_argument('args', help='images to build' nargs=argparse.REMAINDER)
 args = parser.parse_args()
 
 
