@@ -161,7 +161,8 @@ def build_image(build_config, service, simulate=False):
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-c", "--config", action='store_true')
+parser.add_argument("-c", "--config", description='show config', action='store_true')
+parser.add_argument("-s", "--simulate", description='simulate the build process', action='store_true')
 parser.add_argument('args', nargs=argparse.REMAINDER)
 args = parser.parse_args()
 
@@ -173,6 +174,7 @@ build_config_dict = json.loads(build_config_json)
 # show config
 if args.config:
     print(json.dumps(build_config_dict, sort_keys=True, indent=4))
+    sys.exit(0)
 
 
 print("Images:")
@@ -185,7 +187,7 @@ if not os.path.exists(tmp_dir):
 #build_image(build_config_dict, 'mgrast/awe', simulate=True)
 if args.args:
     try:
-        build_image(build_config_dict, args.args[1])
+        build_image(build_config_dict, args.args[1], simulate=args.simulate)
     except Exception as e:
         print("error building image: %s" % (str(e)))
     
