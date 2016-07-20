@@ -97,16 +97,25 @@ def chdir(dir, simulate=False):
 
 def build_image(build_config, service, simulate=False):
     
-    
+    if not service in build_config:
+        raise MyException("Image not found")
+        
     service_obj= build_config[service]
-    directory = service_obj['git_repository'].split('/')[-1]
+    git_repository =  service_obj['git_repository']
+    if not git_repository:
+        raise MyException("field git_repository not found")
+        
+    directory = git_repository.split('/')[-1]
     git_path = service_obj['git_path']
     git_branch = service_obj['git_branch']
-    git_repository =  service_obj['git_repository']
+    
+    if not 'tags' in service_obj:
+        raise MyException("field tags not found")
+    
     tags = service_obj['tags']
     
-    if not tags:
-        raise MyException("no tags found")
+    if len(tags) == 0:
+        raise MyException("field tags empty")
     
     repository_dir_abs = "%s%s" % (tmp_dir, directory)
     print("repository_dir_abs: ", repository_dir_abs)
