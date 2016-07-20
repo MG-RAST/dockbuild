@@ -1,6 +1,11 @@
 # dockbuild
 
-dockbuild is a wrapper around "git" and "docker" to conveniently build Docker images from Dockerfiles located in git repositories. A yaml file is used to specify git repository, branch and Dockerfile location of each image.
+dockbuild is a wrapper around "git" and "docker" to conveniently build Docker images from Dockerfiles located in git repositories. A json file is used to specify git repository, branch and Dockerfile location of each image.
+
+```bash
+docker build -t mgrast/dockbuild .
+```
+
 
 ## Usage:
 
