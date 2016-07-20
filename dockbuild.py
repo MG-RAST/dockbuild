@@ -204,7 +204,7 @@ if not os.path.exists(tmp_dir):
 #build_image(build_config_dict, 'mgrast/awe', simulate=True)
 if args.args:
     try:
-        build_image(build_config_dict, args.args[1], simulate=args.simulate)
+        build_image(build_config_dict, args.args[0], simulate=args.simulate)
     except Exception as e:
         print("error building image: %s" % (str(e)))
     
