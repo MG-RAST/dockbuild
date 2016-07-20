@@ -96,74 +96,82 @@ def chdir(dir, simulate=False):
     os.chdir(dir)
 
 def build_image(build_config, service, simulate=False):
-    
-    if not service in build_config:
-        raise MyException("Image not found")
-        
-    service_obj= build_config[service]
-    git_repository =  service_obj['git_repository']
-    if not git_repository:
-        raise MyException("field git_repository not found")
-        
-    directory = git_repository.split('/')[-1]
-    git_path = service_obj['git_path']
-    git_branch = service_obj['git_branch']
-    
-    if not 'tags' in service_obj:
-        raise MyException("field tags not found")
-    
-    tags = service_obj['tags']
-    
-    if len(tags) == 0:
-        raise MyException("field tags empty")
-    
-    repository_dir_abs = "%s%s" % (tmp_dir, directory)
-    print("repository_dir_abs: ", repository_dir_abs)
-    dockerfile_dir = '/'.join(git_path.split('/')[:-1])
-    if dockerfile_dir:
-        dockerfile_dir_abs = "%s/%s/" % (repository_dir_abs, dockerfile_dir)
-    else:
-        dockerfile_dir_abs = repository_dir_abs
-        
-    cmd_cd = "cd %s" % (dockerfile_dir_abs)
-    
-    repository_dir_abs_exists = os.path.exists(repository_dir_abs)
-    if simulate:
-        repository_dir_abs_exists = False
-    print("simulate:", simulate)
-    if repository_dir_abs_exists:
-        # TODO check that local git is mnot broken !
-        chdir(dockerfile_dir_abs)
-        run("git pull", shell=True) 
-        run("git checkout %s" % (git_branch), shell=True)
-    else:
-        chdir(tmp_dir, simulate=simulate)
-        cmd_clone ="git clone --recursive -b %s %s" % (git_branch, git_repository)
-        run(cmd_clone, shell=True, simulate=simulate)
-        run(cmd_cd, shell=True, simulate=simulate)
-        chdir(dockerfile_dir_abs, simulate=simulate)
-    
-    dockerfile_name = git_path.split('/')[-1]
-    
-    # convert <date> to actual date string
-    date_str = time.strftime('%Y%m%d.%H%M')
-    for i, value in enumerate(tags):
-        if value == "<date>":
-            tags[i] = date_str
-    
-    
-    first_tag = tags[0]
-    
-    # TODO check if container is running!?
-    
-    cmd_rmi = "docker rmi --force=true %s:%s" % ( service , first_tag)
     try:
-        run(cmd_rmi, shell=True, simulate=simulate)
-    except:
-        pass
+        if not service in build_config:
+            raise MyException("Image not found")
+        
+        service_obj= build_config[service]
+        git_repository =  service_obj['git_repository']
+        if not git_repository:
+            raise MyException("field git_repository not found")
+        
+        directory = git_repository.split('/')[-1]
+        git_path = service_obj['git_path']
+        git_branch = service_obj['git_branch']
     
-    cmd_build = "docker build -t %s:%s -f %s ." % ( service , first_tag , dockerfile_name)
-    run(cmd_build, shell=True, simulate=simulate)
+        if not 'tags' in service_obj:
+            raise MyException("field tags not found")
+    
+        tags = service_obj['tags']
+    
+        if len(tags) == 0:
+            raise MyException("field tags empty")
+    
+        repository_dir_abs = "%s%s" % (tmp_dir, directory)
+        print("repository_dir_abs: ", repository_dir_abs)
+        dockerfile_dir = '/'.join(git_path.split('/')[:-1])
+        if dockerfile_dir:
+            dockerfile_dir_abs = "%s/%s/" % (repository_dir_abs, dockerfile_dir)
+        else:
+            dockerfile_dir_abs = repository_dir_abs
+        
+        cmd_cd = "cd %s" % (dockerfile_dir_abs)
+    except Exception as e:
+        raise MyException("Something went wrong in the preparation phase: %s" % (str(e)))
+    
+    try:    
+        repository_dir_abs_exists = os.path.exists(repository_dir_abs)
+        if simulate:
+            repository_dir_abs_exists = False
+        print("simulate:", simulate)
+        if repository_dir_abs_exists:
+            # TODO check that local git is mnot broken !
+            chdir(dockerfile_dir_abs)
+            run("git pull", shell=True) 
+            run("git checkout %s" % (git_branch), shell=True)
+        else:
+            chdir(tmp_dir, simulate=simulate)
+            cmd_clone ="git clone --recursive -b %s %s" % (git_branch, git_repository)
+            run(cmd_clone, shell=True, simulate=simulate)
+            run(cmd_cd, shell=True, simulate=simulate)
+            chdir(dockerfile_dir_abs, simulate=simulate)
+    except Exception as e:
+        raise MyException("Something went wrong in the git clone/pull phase: %s" % (str(e)))
+    
+    try:
+        dockerfile_name = git_path.split('/')[-1]
+    
+        # convert <date> to actual date string
+        date_str = time.strftime('%Y%m%d.%H%M')
+        for i, value in enumerate(tags):
+            if value == "<date>":
+                tags[i] = date_str
+    
+    
+        first_tag = tags[0]
+    
+        # TODO check if container is running!?
+    
+        cmd_rmi = "docker rmi --force=true %s:%s" % ( service , first_tag)
+        try:
+            run(cmd_rmi, shell=True, simulate=simulate)
+        except:
+            pass
+    
+        cmd_build = "docker build -t %s:%s -f %s ." % ( service , first_tag , dockerfile_name)
+        run(cmd_build, shell=True, simulate=simulate)
+    except Exception as e:
+        raise MyException("Something went wrong in the build phase: %s" % (str(e)))
 
 
 ###################################
