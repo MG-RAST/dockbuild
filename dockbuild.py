@@ -177,9 +177,9 @@ if args.config:
     sys.exit(0)
 
 
-print("Images:")
+print("Available images:")
 for service in sorted(build_config_dict):
-    print(service)
+    print("  "+service)
 
 if not os.path.exists(tmp_dir):
     os.makedirs(tmp_dir)
