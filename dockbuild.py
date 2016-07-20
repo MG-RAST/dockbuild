@@ -3,6 +3,8 @@ import subprocess
 import os
 import json
 import time
+import argparse
+
 
 tmp_dir='/tmp/dockerbuilds/'
 
@@ -81,6 +83,8 @@ class MyException(Exception):
 
 def run(cmd, shell=False, simulate=False):
     print(cmd)
+    if simulate:
+        return
     result = subprocess.call(cmd, shell=shell)
     if result != 0:
         raise MyException("Error code: %d" % (result))
@@ -117,7 +121,7 @@ def build_image(build_config, service, simulate=False):
     repository_dir_abs_exists = os.path.exists(repository_dir_abs)
     if simulate:
         repository_dir_abs_exists = False
-    
+    print("simulate:", simulate)
     if repository_dir_abs_exists:
         # TODO check that local git is mnot broken !
         chdir(dockerfile_dir_abs)
@@ -128,7 +132,7 @@ def build_image(build_config, service, simulate=False):
         cmd_clone ="git clone --recursive -b %s %s" % (git_branch, git_repository)
         run(cmd_clone, shell=True, simulate=simulate)
         run(cmd_cd, shell=True, simulate=simulate)
-        chdir(dockerfile_dir_abs)
+        chdir(dockerfile_dir_abs, simulate=simulate)
     
     dockerfile_name = git_path.split('/')[-1]
     
@@ -155,23 +159,35 @@ def build_image(build_config, service, simulate=False):
 
 ###################################
 
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-c", "--config", action='store_true')
+parser.add_argument('args', nargs=argparse.REMAINDER)
+args = parser.parse_args()
+
+
 # load config
 build_config_dict = json.loads(build_config_json)
     
 
 # show config
-print(json.dumps(build_config_dict, sort_keys=True, indent=4))
+if args.config:
+    print(json.dumps(build_config_dict, sort_keys=True, indent=4))
 
 
+print("Images:")
+for service in sorted(build_config_dict):
+    print(service)
 
 if not os.path.exists(tmp_dir):
     os.makedirs(tmp_dir)
 
-
-try:
-    build_image(build_config_dict, 'mgrast/api-server')
-except Exception as e:
-    print()"error building image: %s" % (str(e)))
+#build_image(build_config_dict, 'mgrast/awe', simulate=True)
+if args.args:
+    try:
+        build_image(build_config_dict, args.args[1])
+    except Exception as e:
+        print("error building image: %s" % (str(e)))
     
     
 
