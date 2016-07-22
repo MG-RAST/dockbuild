@@ -2,41 +2,35 @@
 
 dockbuild is a wrapper around "git" and "docker" to conveniently build Docker images from Dockerfiles located in git repositories. A json file is used to specify git repository, branch and Dockerfile location of each image.
 
-```bash
-docker build -t mgrast/dockbuild .
-```
 
-
-## Usage:
+# Installation (with dockbuild using host-installed python)
 
 ```bash
-dockbuild <yaml> <imagename> <tag>
+mkir -p ~/git
+cd ~/git
+git clone https://github.com/MG-RAST/dockbuild.git
 ```
 
-## Get or build Docker image
-
+# Installation (with dockbuild in Docker container)
 ```bash
-docker pull mgrast/dockbuild
+git pull mgrast/dockbuild
 ```
 
-or
-
+# Dockerimage build instructions
 ```bash
 git clone https://github.com/MG-RAST/dockbuild.git
 cd dockbuild
-docker rmi mgrast/dockbuild
 docker build -t mgrast/dockbuild .
 ```
 
 
-## Extract binary from Docker image:
-```bash
-rm -f ./dockbuild
-docker rm dockbuild
-docker create --name dockbuild mgrast/dockbuild
-docker cp dockbuild:/app/dockbuild .
-./dockbuild
-```
+## Usage (dockbuild on host):
 
-## Example yaml file
-See the MG-RAST [yaml file](https://github.com/MG-RAST/MG-RAST-infrastructure/blob/master/mgrast.yaml) for an example.
+```bash
+dockbuild.py [--simulate] <imagename>:<tag>
+```
+## Usage (dockbuild in container):
+This uses a wrapper script (CoreOS only at the moment)
+```bash
+dockbuild.sh [--simulate] <imagename>:<tag>
+```
