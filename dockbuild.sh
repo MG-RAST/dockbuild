@@ -14,6 +14,10 @@ export TARGET_DIR="/media/ephemeral"
 export DOCKER_VERSION=$(/usr/bin/docker --version | grep -o '[0-9]*\.[0-9]*\.[0-9]')
 
 if [ ! -e ${TARGET_DIR}/docker-${DOCKER_VERSION} ] ; then
+    if [[ $EUID -ne 0 ]]; then
+        echo "This script must be run as root to be able to write to ${TARGET_DIR}" 1>&2
+        exit 1
+    fi
     set -x
     rm -f ${TARGET_DIR}/docker-${DOCKER_VERSION}_part
     curl --silent -o ${TARGET_DIR}/docker-${DOCKER_VERSION}_part --retry 10 https://get.docker.com/builds/Linux/x86_64/docker-${DOCKER_VERSION}
