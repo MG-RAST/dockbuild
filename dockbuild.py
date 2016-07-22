@@ -12,66 +12,88 @@ tmp_dir='/tmp/dockerbuilds/'
 
 build_config_json= """{
     "mgrast/api-server": {
-        "git_branch": "api",
-        "git_path": "dockerfiles/api/Dockerfile",
-        "git_repository": "https://github.com/MG-RAST/MG-RAST",
-        "tags" : ["<date>"]
+        "latest": {
+            "git_branch": "api",
+            "git_path": "dockerfiles/api/Dockerfile",
+            "git_repository": "https://github.com/MG-RAST/MG-RAST"
+        }
     },
     "mgrast/awe": {
-        "git_branch": "master",
-        "git_path": "Dockerfile",
-        "git_repository": "https://github.com/MG-RAST/AWE",
-        "tags" : ["<date>"]
+        "latest": {
+            "git_branch": "master",
+            "git_path": "Dockerfile",
+            "git_repository": "https://github.com/MG-RAST/AWE"
+        }
     },
     "mgrast/cassandra": {
-        "git_branch": "master",
-        "git_path": "services/cassandra/docker/Dockerfile",
-        "git_repository": "https://github.com/MG-RAST/MG-RAST-infrastructure"
+        "latest": {
+            "git_branch": "master",
+            "git_path": "services/cassandra/docker/Dockerfile",
+            "git_repository": "https://github.com/MG-RAST/MG-RAST-infrastructure"
+            }
     },
     "log-courier": {
-        "git_branch": "master",
-        "git_path": "services/log-courier/docker/Dockerfile",
-        "git_repository": "https://github.com/MG-RAST/MG-RAST-infrastructure"
+        "latest": {
+            "git_branch": "master",
+            "git_path": "services/log-courier/docker/Dockerfile",
+            "git_repository": "https://github.com/MG-RAST/MG-RAST-infrastructure"
+            }
     },
     "logstash": {
-        "git_branch": "master",
-        "git_path": "services/logstash/Dockerfile",
-        "git_repository": "https://github.com/MG-RAST/MG-RAST-infrastructure"
+        "latest": {
+            "git_branch": "master",
+            "git_path": "services/logstash/Dockerfile",
+            "git_repository": "https://github.com/MG-RAST/MG-RAST-infrastructure"
+            }
     },
     "memcached": {
-        "git_branch": "master",
-        "git_path": "services/memcached/docker/Dockerfile",
-        "git_repository": "https://github.com/MG-RAST/MG-RAST-infrastructure"
+        "latest": {
+            "git_branch": "master",
+            "git_path": "services/memcached/docker/Dockerfile",
+            "git_repository": "https://github.com/MG-RAST/MG-RAST-infrastructure"
+            }
     },
     "mg-rast-confd / mg-rast-nginx": {
-        "git_branch": "master",
-        "git_path": "services/nginx/docker/Dockerfile",
-        "git_repository": "https://github.com/MG-RAST/MG-RAST-infrastructure"
+        "latest": {
+            "git_branch": "master",
+            "git_path": "services/nginx/docker/Dockerfile",
+            "git_repository": "https://github.com/MG-RAST/MG-RAST-infrastructure"
+            }
     },
     "mg-rast-v3-web": {
-        "git_branch": "master",
-        "git_path": "dockerfiles/web/Dockerfile",
-        "git_repository": "https://github.com/MG-RAST/MG-RAST"
+        "latest": {
+            "git_branch": "master",
+            "git_path": "dockerfiles/web/Dockerfile",
+            "git_repository": "https://github.com/MG-RAST/MG-RAST"
+            }
     },
     "mg-rast-v4-web": {
-        "git_branch": "master",
-        "git_path": "Dockerfile",
-        "git_repository": "https://github.com/MG-RAST/MG-RASTv4"
+        "latest": {
+            "git_branch": "master",
+            "git_path": "Dockerfile",
+            "git_repository": "https://github.com/MG-RAST/MG-RASTv4"
+            }
     },
     "pipeline": {
-        "git_branch": "master",
-        "git_path": "dockerfiles/mgrast_base/Dockerfile",
-        "git_repository": "https://github.com/MG-RAST/pipeline"
+        "latest": {
+            "git_branch": "master",
+            "git_path": "dockerfiles/mgrast_base/Dockerfile",
+            "git_repository": "https://github.com/MG-RAST/pipeline"
+            }
     },
     "solr-m5nr": {
-        "git_branch": "master",
-        "git_path": "services/solr-m5nr/docker/Dockerfile",
-        "git_repository": "https://github.com/MG-RAST/MG-RAST-infrastructure"
+        "latest": {
+            "git_branch": "master",
+            "git_path": "services/solr-m5nr/docker/Dockerfile",
+            "git_repository": "https://github.com/MG-RAST/MG-RAST-infrastructure"
+            }
     },
     "solr-metagenome": {
-        "git_branch": "master",
-        "git_path": "services/solr-metagenome/docker/Dockerfile",
-        "git_repository": "https://github.com/MG-RAST/MG-RAST-infrastructure"
+        "latest": {
+            "git_branch": "master",
+            "git_path": "services/solr-metagenome/docker/Dockerfile",
+            "git_repository": "https://github.com/MG-RAST/MG-RAST-infrastructure"
+            }
     }
 }
 """
@@ -95,28 +117,40 @@ def chdir(dir, simulate=False):
         return
     os.chdir(dir)
 
-def build_image(build_config, service, simulate=False):
+def build_image(build_config, image, simulate=False, checkout=None):
     try:
-        if not service in build_config:
+        
+        if not image:
+           raise MyException("No image specified")
+        
+        image_split = image.split(':')
+        
+        image_name = image_split[0]
+        image_tag=None
+        if len(image_split) > 1:
+            image_tag = image_split[1]
+        
+        if not image_tag:
+            image_tag = 'latest'
+        
+        if not image_name in build_config:
             raise MyException("Image not found")
         
-        service_obj= build_config[service]
-        git_repository =  service_obj['git_repository']
+        image_obj= build_config[image_name]
+        if not image_tag in image_obj:
+            raise MyException("tag %s for image % not found" % (image_tag, image_name))
+        
+        tag_object = image_obj[image_tag]
+        
+        git_repository =  tag_object['git_repository']
         if not git_repository:
             raise MyException("field git_repository not found")
         
         directory = git_repository.split('/')[-1]
-        git_path = service_obj['git_path']
-        git_branch = service_obj['git_branch']
+        git_path = tag_object['git_path']
+        git_branch = tag_object['git_branch']
     
-        if not 'tags' in service_obj:
-            raise MyException("field tags not found")
-    
-        tags = service_obj['tags']
-    
-        if len(tags) == 0:
-            raise MyException("field tags empty")
-    
+        
         repository_dir_abs = "%s%s" % (tmp_dir, directory)
         print("repository_dir_abs: ", repository_dir_abs)
         dockerfile_dir = '/'.join(git_path.split('/')[:-1])
@@ -134,17 +168,29 @@ def build_image(build_config, service, simulate=False):
         if simulate:
             repository_dir_abs_exists = False
         print("simulate:", simulate)
+        fresh_clone = True
         if repository_dir_abs_exists:
             # TODO check that local git is mnot broken !
             chdir(dockerfile_dir_abs)
             run("git pull", shell=True) 
             run("git checkout %s" % (git_branch), shell=True)
         else:
+            fresh_clone = False
             chdir(tmp_dir, simulate=simulate)
             cmd_clone ="git clone --recursive -b %s %s" % (git_branch, git_repository)
             run(cmd_clone, shell=True, simulate=simulate)
             run(cmd_cd, shell=True, simulate=simulate)
             chdir(dockerfile_dir_abs, simulate=simulate)
+            
+        # git reset --hard
+        if checkout:
+            checkout_cmd = "git checkout %s" % (checkout)
+            run(checkout_cmd, shell=True, simulate=simulate)
+        else:
+            if not fresh_clone:
+                reset_cmd = "git reset --hard"
+                run(reset_cmd, shell=True, simulate=simulate)
+            
     except Exception as e:
         raise MyException("Something went wrong in the git clone/pull phase: %s" % (str(e)))
     
@@ -152,23 +198,23 @@ def build_image(build_config, service, simulate=False):
         dockerfile_name = git_path.split('/')[-1]
     
         # convert <date> to actual date string
-        date_str = time.strftime('%Y%m%d.%H%M')
-        for i, value in enumerate(tags):
-            if value == "<date>":
-                tags[i] = date_str
+        #date_str = time.strftime('%Y%m%d.%H%M')
+        #for i, value in enumerate(tags):
+        #    if value == "<date>":
+        #        tags[i] = date_str
     
     
-        first_tag = tags[0]
+        #first_tag = tags[0]
     
         # TODO check if container is running!?
     
-        cmd_rmi = "docker rmi --force=true %s:%s" % ( service , first_tag)
+        cmd_rmi = "docker rmi --force=true %s:%s" % ( image_name , image_tag)
         try:
             run(cmd_rmi, shell=True, simulate=simulate)
         except:
             pass
     
-        cmd_build = "docker build -t %s:%s -f %s ." % ( service , first_tag , dockerfile_name)
+        cmd_build = "docker build -t %s:%s -f %s ." % ( image_name , image_tag , dockerfile_name)
         run(cmd_build, shell=True, simulate=simulate)
     except Exception as e:
         raise MyException("Something went wrong in the build phase: %s" % (str(e)))
@@ -179,6 +225,7 @@ def build_image(build_config, service, simulate=False):
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-c", "--config", help='show config', action='store_true')
+parser.add_argument("--checkout", help='checkout <branch> or <commit>', action='store')
 parser.add_argument("-s", "--simulate", help='simulate the build process', action='store_true')
 parser.add_argument('args', help='images to build', nargs=argparse.REMAINDER)
 args = parser.parse_args()
@@ -195,8 +242,8 @@ if args.config:
 
 
 print("Available images:")
-for service in sorted(build_config_dict):
-    print("  "+service)
+for image_name in sorted(build_config_dict):
+    print("  "+image_name)
 
 if not os.path.exists(tmp_dir):
     os.makedirs(tmp_dir)
