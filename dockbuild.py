@@ -23,6 +23,11 @@ build_config_json= """{
             "git_branch": "master",
             "git_path": "Dockerfile",
             "git_repository": "https://github.com/MG-RAST/AWE"
+        },
+        "deprecated": {
+            "git_branch": "master",
+            "git_path": "Dockerfile_deprecated",
+            "git_repository": "https://github.com/MG-RAST/AWE"
         }
     },
     "mgrast/cassandra": {
@@ -32,63 +37,63 @@ build_config_json= """{
             "git_repository": "https://github.com/MG-RAST/MG-RAST-infrastructure"
             }
     },
-    "log-courier": {
+    "mgrast/log-courier": {
         "latest": {
             "git_branch": "master",
-            "git_path": "services/log-courier/docker/Dockerfile",
+            "git_path": "services/log-courier/Dockerfile",
             "git_repository": "https://github.com/MG-RAST/MG-RAST-infrastructure"
             }
     },
-    "logstash": {
+    "mgrast/logstash": {
         "latest": {
             "git_branch": "master",
             "git_path": "services/logstash/Dockerfile",
             "git_repository": "https://github.com/MG-RAST/MG-RAST-infrastructure"
             }
     },
-    "memcached": {
+    "mgrast/memcached": {
         "latest": {
             "git_branch": "master",
             "git_path": "services/memcached/docker/Dockerfile",
             "git_repository": "https://github.com/MG-RAST/MG-RAST-infrastructure"
             }
     },
-    "mg-rast-confd / mg-rast-nginx": {
+    "mg-rast/nginxconfd": {
         "latest": {
             "git_branch": "master",
             "git_path": "services/nginx/docker/Dockerfile",
             "git_repository": "https://github.com/MG-RAST/MG-RAST-infrastructure"
             }
     },
-    "mg-rast-v3-web": {
+    "mgrast/v3-web": {
         "latest": {
             "git_branch": "master",
             "git_path": "dockerfiles/web/Dockerfile",
             "git_repository": "https://github.com/MG-RAST/MG-RAST"
             }
     },
-    "mg-rast-v4-web": {
+    "mgrast/v4-web": {
         "latest": {
             "git_branch": "master",
             "git_path": "Dockerfile",
             "git_repository": "https://github.com/MG-RAST/MG-RASTv4"
             }
     },
-    "pipeline": {
+    "mgrast/pipeline": {
         "latest": {
             "git_branch": "master",
             "git_path": "dockerfiles/mgrast_base/Dockerfile",
             "git_repository": "https://github.com/MG-RAST/pipeline"
             }
     },
-    "solr-m5nr": {
+    "mgrast/solr-m5nr": {
         "latest": {
             "git_branch": "master",
             "git_path": "services/solr-m5nr/docker/Dockerfile",
             "git_repository": "https://github.com/MG-RAST/MG-RAST-infrastructure"
             }
     },
-    "solr-metagenome": {
+    "mgrast/solr-metagenome": {
         "latest": {
             "git_branch": "master",
             "git_path": "services/solr-metagenome/docker/Dockerfile",
