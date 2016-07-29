@@ -14,7 +14,7 @@ build_config_json= """{
     "mgrast/api-server": {
         "latest": {
             "git_branch": "api",
-            "git_path": "dockerfiles/api/Dockerfile",
+            "git_path": "Dockerfile",
             "git_repository": "https://github.com/MG-RAST/MG-RAST"
         }
     },
