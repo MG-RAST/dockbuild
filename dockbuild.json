@@ -25,6 +25,13 @@
             "git_repository": "https://github.com/MG-RAST/MG-RAST-infrastructure"
             }
     },
+    "mgrast/ganglia-gmond": {
+        "latest": {
+            "git_branch": "master",
+            "git_path": "services/ganglia-gmond/Dockerfile",
+            "git_repository": "https://github.com/MG-RAST/MG-RAST-infrastructure"
+            }
+    },
     "mgrast/log-courier": {
         "latest": {
             "git_branch": "master",

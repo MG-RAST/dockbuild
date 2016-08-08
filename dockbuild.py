@@ -5,103 +5,14 @@ import json
 import time
 import argparse
 import sys
+import requests
+
 
 tmp_dir='/tmp/dockerbuilds/'
+dockbuild_index_url = 'https://raw.githubusercontent.com/MG-RAST/dockbuild/master/dockbuild.json'
 
 
-
-build_config_json= """{
-    "mgrast/api-server": {
-        "latest": {
-            "git_branch": "api",
-            "git_path": "Dockerfile",
-            "git_repository": "https://github.com/MG-RAST/MG-RAST"
-        }
-    },
-    "mgrast/awe": {
-        "latest": {
-            "git_branch": "master",
-            "git_path": "Dockerfile",
-            "git_repository": "https://github.com/MG-RAST/AWE"
-        },
-        "deprecated": {
-            "git_branch": "master",
-            "git_path": "Dockerfile_deprecated",
-            "git_repository": "https://github.com/MG-RAST/AWE"
-        }
-    },
-    "mgrast/cassandra": {
-        "latest": {
-            "git_branch": "master",
-            "git_path": "services/cassandra/docker/Dockerfile",
-            "git_repository": "https://github.com/MG-RAST/MG-RAST-infrastructure"
-            }
-    },
-    "mgrast/log-courier": {
-        "latest": {
-            "git_branch": "master",
-            "git_path": "services/log-courier/Dockerfile",
-            "git_repository": "https://github.com/MG-RAST/MG-RAST-infrastructure"
-            }
-    },
-    "mgrast/logstash": {
-        "latest": {
-            "git_branch": "master",
-            "git_path": "services/logstash/Dockerfile",
-            "git_repository": "https://github.com/MG-RAST/MG-RAST-infrastructure"
-            }
-    },
-    "mgrast/memcached": {
-        "latest": {
-            "git_branch": "master",
-            "git_path": "services/memcached/docker/Dockerfile",
-            "git_repository": "https://github.com/MG-RAST/MG-RAST-infrastructure"
-            }
-    },
-    "mg-rast/nginxconfd": {
-        "latest": {
-            "git_branch": "master",
-            "git_path": "services/nginx/docker/Dockerfile",
-            "git_repository": "https://github.com/MG-RAST/MG-RAST-infrastructure"
-            }
-    },
-    "mgrast/v3-web": {
-        "latest": {
-            "git_branch": "master",
-            "git_path": "dockerfiles/web/Dockerfile",
-            "git_repository": "https://github.com/MG-RAST/MG-RAST"
-            }
-    },
-    "mgrast/v4-web": {
-        "latest": {
-            "git_branch": "master",
-            "git_path": "Dockerfile",
-            "git_repository": "https://github.com/MG-RAST/MG-RASTv4"
-            }
-    },
-    "mgrast/pipeline": {
-        "latest": {
-            "git_branch": "master",
-            "git_path": "dockerfiles/mgrast_base/Dockerfile",
-            "git_repository": "https://github.com/MG-RAST/pipeline"
-            }
-    },
-    "mgrast/solr-m5nr": {
-        "latest": {
-            "git_branch": "master",
-            "git_path": "services/solr-m5nr/docker/Dockerfile",
-            "git_repository": "https://github.com/MG-RAST/MG-RAST-infrastructure"
-            }
-    },
-    "mgrast/solr-metagenome": {
-        "latest": {
-            "git_branch": "master",
-            "git_path": "services/solr-metagenome/docker/Dockerfile",
-            "git_repository": "https://github.com/MG-RAST/MG-RAST-infrastructure"
-            }
-    }
-}
-"""
+build_config_json=None
 
 
 class MyException(Exception):
@@ -235,6 +146,24 @@ parser.add_argument("-s", "--simulate", help='simulate the build process', actio
 parser.add_argument('args', help='images to build', nargs=argparse.REMAINDER)
 args = parser.parse_args()
 
+
+#find config
+config_file = "dockbuild.json"
+if os.path.exists(config_file):
+    with open(config_file, 'r') as content_file:
+        build_config_json = content_file.read()
+
+
+if not build_config_json:
+    try:
+        f = requests.get(dockbuild_index_url)
+        build_config_json = f.text
+    except Excepetion as e:
+        print("Error downloading index: %s" % (str(e)))
+
+if not build_config_json:
+    print("error: index not found")
+    sys.exit(1)
 
 # load config
 build_config_dict = json.loads(build_config_json)
