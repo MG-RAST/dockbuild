@@ -6,6 +6,13 @@
             "git_repository": "https://github.com/MG-RAST/MG-RAST"
         }
     },
+    "mgrast/api-base": {
+        "latest": {
+            "git_branch": "api",
+            "git_path": "Dockerfile_api-base",
+            "git_repository": "https://github.com/MG-RAST/MG-RAST"
+        }
+    },
     "mgrast/awe": {
         "latest": {
             "git_branch": "master",
