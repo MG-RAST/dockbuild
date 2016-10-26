@@ -1,5 +1,5 @@
 {
-    "mgrast/api-server": {
+    "mgrast/api": {
         "latest": {
             "git_branch": "api",
             "git_path": "Dockerfile",
