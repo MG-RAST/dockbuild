@@ -9,7 +9,7 @@ import requests
 
 
 tmp_dir='/tmp/dockerbuilds/'
-dockbuild_index_url = 'https://raw.githubusercontent.com/MG-RAST/dockbuild/master/dockbuild.json'
+dockbuild_index_url = 'https://raw.githubusercontent.com/MG-RAST/dockbuild/master/images.json'
 
 
 build_config_json=None
@@ -148,7 +148,7 @@ args = parser.parse_args()
 
 
 #find config
-config_file = "dockbuild.json"
+config_file = "images.json"
 if os.path.exists(config_file):
     with open(config_file, 'r') as content_file:
         build_config_json = content_file.read()
